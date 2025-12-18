@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Midnight Chef | Late-Night Recipe Discovery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden; /* Prevent scroll during intro */
+        }
+
+        /* Animated Opening Styles */
+        #intro-overlay {
+            position: fixed;
+            inset: 0;
+            background: #020617;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 1s cubic-bezier(0.87, 0, 0.13, 1), opacity 0.8s ease;
+        }
+
+        .moon {
+            width: 80px;
+            height: 80px;
+            background: #f1f5f9;
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(241, 245, 249, 0.4);
+            position: relative;
+            margin-bottom: 2rem;
+            animation: moonPulse 2s infinite ease-in-out;
+        }
+
+        .moon::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -10px;
+            width: 80px;
+            height: 80px;
+            background: #020617;
+            border-radius: 50%;
+        }
+
+        @keyframes moonPulse {
+            0%, 100% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.05); filter: brightness(1.2); }
+        }
+
+        .intro-text {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: textSlideUp 1s forwards 0.5s;
+        }
+
+        @keyframes textSlideUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .intro-loader {
+            width: 40px;
+            height: 4px;
+            background: #1e293b;
+            border-radius: 2px;
+            margin-top: 1.5rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .intro-loader::after {
+            content: '';
+            position: absolute;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: #38bdf8;
+            animation: loadingBar 1.5s forwards 0.8s;
+        }
+
+        @keyframes loadingBar {
+            to { left: 0; }
+        }
+
+        .intro-finish {
+            transform: translateY(-100%) !important;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Existing Styles */
+        .recipe-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tag-input:focus-within {
+            ring: 2px solid #38bdf8;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-card { animation: fadeIn 0.4s ease forwards; }
+
+        /* Content initially hidden for entrance effect */
+        #main-content {
+            opacity: 0;
+            transform: scale(0.98);
+            transition: opacity 1s ease 0.5s, transform 1s ease 0.5s;
+        }
+
+        #main-content.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Opening Animation Overlay -->
+    <div id="intro-overlay">
+        <div class="moon"></div>
+        <div class="intro-text">Midnight <span class="text-sky-400">Chef</span></div>
+        <div class="intro-loader"></div>
+    </div>
+
+    <div id="main-content">
+        <!-- Header Section -->
+        <header class="py-12 px-4 text-center">
+            <div class="inline-block p-2 px-4 bg-sky-500/10 text-sky-400 rounded-full text-xs font-bold uppercase tracking-widest mb-4">
+                🌙 Late Night Savior
+            </div>
+            <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">Midnight <span class="text-sky-400">Chef</span></h1>
+            <p class="text-slate-400 max-w-xl mx-auto text-lg">Empty fridge? No problem. Enter what you have, and we'll find a healthy, budget-friendly meal for you.</p>
+        </header>
+
+        <main class="max-w-6xl mx-auto px-4 pb-20">
+            <!-- Input Section -->
+            <section class="mb-12">
+                <div class="glass-panel p-8 rounded-3xl shadow-2xl">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Your Pantry</h2>
+                            <p class="text-sm text-slate-400">Add the ingredients you currently have available.</p>
+                        </div>
+                        <button onclick="clearAll()" class="text-xs font-bold uppercase tracking-wider text-rose-400 hover:text-rose-300 transition-colors">
+                            <i class="fas fa-trash-alt mr-2"></i>Clear All
+                        </button>
+                    </div>
+
+                    <div class="tag-input flex flex-wrap items-center gap-3 p-4 bg-slate-900/50 rounded-2xl border border-slate-700 min-h-[64px] transition-all">
+                        <div id="ingredientTags" class="flex flex-wrap gap-2">
+                            <!-- Tags injected here -->
+                        </div>
+                        <input type="text" id="ingredientInput" 
+                               placeholder="Type ingredient and press Enter..." 
+                               class="bg-transparent border-none outline-none flex-grow text-slate-100 min-w-[250px] text-lg">
+                    </div>
+
+                    <div class="mt-6 flex flex-wrap items-center gap-4">
+                        <span class="text-xs text-slate-500 uppercase font-bold tracking-widest">Common Ingredients:</span>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="addIngredient('Egg')" class="text-xs px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 border border-slate-700 transition-all">🥚 Egg</button>
+                            <button onclick="addIngredient('Bread')" class="text-xs px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 border border-slate-700 transition-all">🍞 Bread</button>
+                            <button onclick="addIngredient('Potato')" class="text-xs px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 border border-slate-700 transition-all">🥔 Potato</button>
+                            <button onclick="addIngredient('Onion')" class="text-xs px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 border border-slate-700 transition-all">🧅 Onion</button>
+                            <button onclick="addIngredient('Cheese')" class="text-xs px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 border border-slate-700 transition-all">🧀 Cheese</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filters Section -->
+            <section class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+                <div>
+                    <h2 class="text-2xl font-bold flex items-center gap-3">
+                        Recommended Recipes 
+                        <span id="recipeCount" class="text-sm font-normal bg-slate-800 text-slate-400 px-2.5 py-0.5 rounded-full">0</span>
+                    </h2>
+                </div>
+                <div class="flex flex-wrap gap-3" id="filterContainer">
+                    <button onclick="toggleFilter('isHealthy')" data-filter="isHealthy" class="px-5 py-2.5 rounded-xl bg-slate-800 text-sm font-semibold border border-slate-700 hover:border-emerald-500 transition-all flex items-center gap-2">
+                        <span>🥗</span> Healthy
+                    </button>
+                    <button onclick="toggleFilter('isBudget')" data-filter="isBudget" class="px-5 py-2.5 rounded-xl bg-slate-800 text-sm font-semibold border border-slate-700 hover:border-amber-500 transition-all flex items-center gap-2">
+                        <span>💰</span> Budget
+                    </button>
+                    <button onclick="toggleFilter('isQuick')" data-filter="isQuick" class="px-5 py-2.5 rounded-xl bg-slate-800 text-sm font-semibold border border-slate-700 hover:border-sky-500 transition-all flex items-center gap-2">
+                        <span>⏱️</span> Quick
+                    </button>
+                </div>
+            </section>
+
+            <!-- Recipe Grid -->
+            <div id="recipeGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Cards injected here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden text-center py-24 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">
+                <div class="text-7xl mb-6">👨‍🍳</div>
+                <h3 class="text-2xl font-bold mb-3 text-white">Looking for the perfect match...</h3>
+                <p class="text-slate-500 max-w-sm mx-auto">Add some ingredients above or adjust your filters to see what you can cook tonight!</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Recipe Detail -->
+    <div id="recipeModal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl">
+            <div class="p-8 md:p-12 overflow-y-auto max-h-[90vh]">
+                <div class="flex justify-between items-start mb-8">
+                    <div>
+                        <h2 id="modalTitle" class="text-4xl font-black mb-4 leading-tight">Recipe Name</h2>
+                        <div id="modalTags" class="flex flex-wrap gap-3"></div>
+                    </div>
+                    <button onclick="closeModal()" class="text-slate-500 hover:text-white transition-colors text-3xl p-2">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="grid md:grid-cols-5 gap-10">
+                    <div class="md:col-span-2">
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+                            <h4 class="text-sky-400 font-bold uppercase text-xs tracking-widest mb-6 flex items-center gap-2">
+                                <i class="fas fa-list"></i> Ingredients
+                            </h4>
+                            <ul id="modalIngredients" class="space-y-4 text-slate-300"></ul>
+                        </div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <h4 class="text-sky-400 font-bold uppercase text-xs tracking-widest mb-6 flex items-center gap-2">
+                            <i class="fas fa-utensils"></i> Instructions
+                        </h4>
+                        <div id="modalDescription" class="text-slate-300 leading-relaxed text-lg space-y-4"></div>
+                    </div>
+                </div>
+                
+                <div class="mt-12 pt-8 border-t border-slate-800 flex justify-between items-center">
+                    <p class="text-slate-500 text-sm italic">Always check if ingredients are fresh before cooking!</p>
+                    <button onclick="closeModal()" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-4 px-10 rounded-2xl transition-all shadow-lg shadow-sky-500/20 active:scale-95">
+                        Start Cooking
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Intro Animation Trigger
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const intro = document.getElementById('intro-overlay');
+                const content = document.getElementById('main-content');
+                
+                intro.classList.add('intro-finish');
+                content.classList.add('visible');
+                document.body.style.overflow = 'auto';
+            }, 2500); // 2.5 seconds splash
+        });
+
+        /**
+         * Core Database
+         */
+        const recipes = [
+            {
+                id: 1,
+                name: "Classic Scrambled Eggs",
+                ingredients: ["egg", "milk", "butter", "pepper"],
+                description: "Whisk 2 eggs and a splash of milk. Melt butter in a pan over medium heat. Pour in eggs and stir gently until fluffy. Season with pepper and salt.",
+                time: 5,
+                cost: "₹",
+                isHealthy: true,
+                isBudget: true,
+                isQuick: true
+            },
+            {
+                id: 2,
+                name: "Midnight Garlic Toast",
+                ingredients: ["bread", "garlic", "butter", "cheese"],
+                description: "Toast bread slices. Rub with a sliced garlic clove. Spread butter and sprinkle your choice of cheese. Broil for 2 minutes until bubbly and golden.",
+                time: 7,
+                cost: "₹",
+                isHealthy: false,
+                isBudget: true,
+                isQuick: true
+            },
+            {
+                id: 3,
+                name: "Student Protein Bowl",
+                ingredients: ["rice", "egg", "onion", "soy sauce", "vegetables"],
+                description: "Sauté onions and any leftover veggies in a pan. Add cooked rice and a dash of soy sauce. Create a well in the center, crack an egg, and scramble it into the rice.",
+                time: 15,
+                cost: "₹",
+                isHealthy: true,
+                isBudget: true,
+                isQuick: true
+            },
+            {
+                id: 4,
+                name: "Cheesy Quesadilla",
+                ingredients: ["tortilla", "cheese", "onion", "chili"],
+                description: "Place cheese and sliced onions on half a tortilla. Add chili if you like it spicy. Fold and cook on a dry skillet for 3 minutes per side until the shell is crisp.",
+                time: 10,
+                cost: "₹",
+                isHealthy: false,
+                isBudget: true,
+                isQuick: true
+            },
+            {
+                id: 5,
+                name: "Pasta Aglio e Olio",
+                ingredients: ["pasta", "garlic", "oil", "chili flakes"],
+                description: "Boil pasta in salted water. Sauté thin slices of garlic in olive oil with chili flakes until light golden. Toss pasta directly into the pan with a bit of pasta water.",
+                time: 12,
+                cost: "₹",
+                isHealthy: true,
+                isBudget: true,
+                isQuick: true
+            },
+            {
+                id: 6,
+                name: "PB & Banana Toast",
+                ingredients: ["bread", "peanut butter", "banana"],
+                description: "Toast two slices of bread. Spread thick peanut butter and top with sliced bananas. A perfect energy-boosting snack.",
+                time: 3,
+                cost: "₹",
+                isHealthy: true,
+                isBudget: true,
+                isQuick: true
+            },
+            {
+                id: 7,
+                name: "Crispy Potato Hash",
+                ingredients: ["potato", "onion", "oil", "pepper"],
+                description: "Dice potatoes and onions into very small cubes. Fry in oil on high heat until the edges are crispy. Season with salt and lots of black pepper.",
+                time: 25,
+                cost: "₹",
+                isHealthy: false,
+                isBudget: true,
+                isQuick: true
+            },
+            {
+                id: 8,
+                name: "Creamy Oats",
+                ingredients: ["oats", "milk", "sugar", "banana"],
+                description: "Combine oats and milk in a pot. Simmer until thickened. Sweeten with sugar and top with sliced bananas for a comforting late-night meal.",
+                time: 8,
+                cost: "₹",
+                isHealthy: true,
+                isBudget: true,
+                isQuick: true
+            }
+        ];
+
+        // Global State
+        let userIngredients = [];
+        let activeFilters = {
+            isHealthy: false,
+            isBudget: false,
+            isQuick: false
+        };
+
+        const inputEl = document.getElementById('ingredientInput');
+        const tagsContainer = document.getElementById('ingredientTags');
+        const recipeGrid = document.getElementById('recipeGrid');
+        const emptyState = document.getElementById('emptyState');
+        const recipeCountEl = document.getElementById('recipeCount');
+
+        // Initial App Load
+        renderRecipes();
+
+        // Keyboard Handlers
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && inputEl.value.trim() !== '') {
+                addIngredient(inputEl.value.trim());
+                inputEl.value = '';
+            }
+        });
+
+        function addIngredient(name) {
+            const normalized = name.toLowerCase().trim();
+            if (normalized && !userIngredients.includes(normalized)) {
+                userIngredients.push(normalized);
+                updateUI();
+            }
+        }
+
+        function removeIngredient(name) {
+            userIngredients = userIngredients.filter(i => i !== name);
+            updateUI();
+        }
+
+        function clearAll() {
+            userIngredients = [];
+            updateUI();
+        }
+
+        function toggleFilter(filterKey) {
+            activeFilters[filterKey] = !activeFilters[filterKey];
+            const btn = document.querySelector(`[data-filter="${filterKey}"]`);
+            if (activeFilters[filterKey]) {
+                btn.classList.add('bg-sky-500/20', 'border-sky-500', 'text-sky-400', 'shadow-lg', 'shadow-sky-500/10');
+                btn.classList.remove('bg-slate-800', 'border-slate-700');
+            } else {
+                btn.classList.remove('bg-sky-500/20', 'border-sky-500', 'text-sky-400', 'shadow-lg', 'shadow-sky-500/10');
+                btn.classList.add('bg-slate-800', 'border-slate-700');
+            }
+            renderRecipes();
+        }
+
+        function updateUI() {
+            renderTags();
+            renderRecipes();
+        }
+
+        function renderTags() {
+            tagsContainer.innerHTML = userIngredients.map(ing => `
+                <span class="flex items-center gap-2 px-4 py-2 bg-sky-500/10 text-sky-400 rounded-xl text-sm font-medium border border-sky-500/20 animate-in fade-in zoom-in duration-300">
+                    ${ing}
+                    <button onclick="removeIngredient('${ing}')" class="hover:text-white transition-colors">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </span>
+            `).join('');
+        }
+
+        function renderRecipes() {
+            let filtered = [...recipes];
+            if (activeFilters.isHealthy) filtered = filtered.filter(r => r.isHealthy);
+            if (activeFilters.isBudget) filtered = filtered.filter(r => r.isBudget);
+            if (activeFilters.isQuick) filtered = filtered.filter(r => r.isQuick);
+
+            const scoredRecipes = filtered.map(recipe => {
+                const matches = recipe.ingredients.filter(ing => 
+                    userIngredients.some(ui => ing.includes(ui) || ui.includes(ing))
+                );
+                return { 
+                    ...recipe, 
+                    matchCount: matches.length,
+                    matchPercent: Math.round((matches.length / recipe.ingredients.length) * 100)
+                };
+            });
+
+            if (userIngredients.length > 0) {
+                scoredRecipes.sort((a, b) => b.matchCount - a.matchCount);
+            }
+
+            recipeCountEl.innerText = scoredRecipes.length;
+
+            if (scoredRecipes.length === 0) {
+                recipeGrid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            recipeGrid.innerHTML = scoredRecipes.map((recipe, index) => {
+                const isRelevant = userIngredients.length > 0 && recipe.matchCount > 0;
+                return `
+                    <div class="recipe-card animate-card glass-panel rounded-3xl overflow-hidden flex flex-col cursor-pointer group" 
+                         style="animation-delay: ${index * 0.05}s"
+                         onclick="openModal(${recipe.id})">
+                        <div class="p-8 flex-grow flex flex-col">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-2xl font-bold text-white group-hover:text-sky-400 transition-colors">${recipe.name}</h3>
+                                <span class="text-xs font-mono text-slate-500 bg-slate-800/50 px-2 py-1 rounded">${recipe.cost}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                ${recipe.isHealthy ? '<span class="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-1 rounded-md uppercase font-black tracking-tighter">Healthy</span>' : ''}
+                                ${recipe.isQuick ? '<span class="text-[10px] bg-sky-500/10 text-sky-400 px-2 py-1 rounded-md uppercase font-black tracking-tighter">Quick</span>' : ''}
+                                ${recipe.isBudget ? '<span class="text-[10px] bg-amber-500/10 text-amber-500 px-2 py-1 rounded-md uppercase font-black tracking-tighter">Budget</span>' : ''}
+                            </div>
+                            <p class="text-slate-400 text-sm line-clamp-2 mb-8 leading-relaxed">${recipe.description}</p>
+                            <div class="mt-auto space-y-3">
+                                <div class="flex justify-between items-center text-xs font-bold uppercase tracking-wider">
+                                    <span class="text-slate-500"><i class="far fa-clock mr-1.5"></i> ${recipe.time} min</span>
+                                    <span class="${isRelevant ? 'text-sky-400' : 'text-slate-500'}">${recipe.matchCount}/${recipe.ingredients.length} Matched</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div class="bg-gradient-to-r from-sky-600 to-sky-400 h-full transition-all duration-700 ease-out" style="width: ${recipe.matchPercent}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openModal(id) {
+            const recipe = recipes.find(r => r.id === id);
+            if (!recipe) return;
+            document.getElementById('modalTitle').innerText = recipe.name;
+            document.getElementById('modalDescription').innerText = recipe.description;
+            const ingredientsList = document.getElementById('modalIngredients');
+            ingredientsList.innerHTML = recipe.ingredients.map(ing => {
+                const hasIt = userIngredients.some(ui => ing.includes(ui) || ui.includes(ing));
+                return `
+                    <li class="flex items-center gap-4 group">
+                        <div class="w-6 h-6 rounded-full flex items-center justify-center transition-colors ${hasIt ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-800 text-slate-600'}">
+                            <i class="fas ${hasIt ? 'fa-check text-[10px]' : 'fa-minus text-[10px]'}"></i>
+                        </div>
+                        <span class="text-lg ${hasIt ? 'text-slate-100 font-medium' : 'text-slate-500 italic'}">${ing}</span>
+                    </li>
+                `;
+            }).join('');
+            const tagsContainer = document.getElementById('modalTags');
+            tagsContainer.innerHTML = `
+                <span class="px-4 py-2 bg-slate-800 rounded-xl text-sm font-bold text-slate-300 border border-slate-700"><i class="far fa-clock mr-2 text-sky-400"></i>${recipe.time} mins</span>
+                <span class="px-4 py-2 bg-slate-800 rounded-xl text-sm font-bold text-slate-300 border border-slate-700"><i class="fas fa-wallet mr-2 text-amber-400"></i>Cost: ${recipe.cost}</span>
+            `;
+            document.getElementById('recipeModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('recipeModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        window.onclick = (e) => {
+            const modal = document.getElementById('recipeModal');
+            if (e.target == modal) closeModal();
+        };
+    </script>
+</body>
+</html>
